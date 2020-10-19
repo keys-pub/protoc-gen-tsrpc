@@ -144,7 +144,7 @@ func generate(file *descriptor.File, registry *descriptor.Registry, options Gene
 	name := file.GetName()
 	ext := filepath.Ext(name)
 	base := strings.TrimSuffix(name, ext)
-	typesImport := "./" + base + ".d"
+	typesImport := "./" + base
 
 	for _, service := range f.Services {
 		s, t, serr := options.serviceToRPC(base, service, registry)
