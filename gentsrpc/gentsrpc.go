@@ -43,10 +43,10 @@ func (cfg GeneratorOptions) methodToPromise(name string, m *descriptor.Method) (
 
 	s := `  ` + rpcName + `(req: ` + requestType + `): Promise<` + responseType + `> {
     return new Promise<` + responseType + `>((resolve, reject) => {
-      this.service.` + rpcName + `(req, (err: RPCError, resp: ` + responseType + `) => {
+      this.service().` + rpcName + `(req, (err: RPCError, resp: ` + responseType + `) => {
         if (err) {
-		  reject(err)
-		  this.emitError(err)
+          reject(err)
+          this.emitError(err)
           return
         }
         resolve(resp)
@@ -67,7 +67,7 @@ func (cfg GeneratorOptions) streamMethod(name string, m *descriptor.Method) (str
 	// fullMethod := serviceName + "." + methodName
 
 	s := `  ` + rpcName + `(): ClientDuplexStream<` + requestType + `, ` + responseType + `> {
-    return this.service.` + rpcName + `()
+    return this.service().` + rpcName + `()
   }
 `
 	return s, methodName, types
@@ -94,11 +94,19 @@ func (cfg GeneratorOptions) serviceToRPC(packageName string, s *descriptor.Servi
 	types = unique(types)
 
 	out := `export class ` + *s.Name + `Service extends EventEmitter {
-  service: ServiceClient
+  serviceFn: () => ServiceClient
+  client?: ServiceClient
   
-  constructor(service: ServiceClient) {
+  constructor(serviceFn: () => ServiceClient) {
     super()
-    this.service = service
+    this.serviceFn = serviceFn
+  }
+
+  service(): ServiceClient {
+    if (!this.client) {
+      this.client = this.serviceFn()
+    }
+    return this.client
   }
 
   emitError(err: RPCError) {
