@@ -43,6 +43,7 @@ func (cfg GeneratorOptions) methodToPromise(name string, m *descriptor.Method) (
 
 	s := `  ` + rpcName + `(req: ` + requestType + `): Promise<` + responseType + `> {
     return new Promise<` + responseType + `>((resolve, reject) => {
+      this.log.info('` + rpcName + `')
       this.service().` + rpcName + `(req, (err: RPCError, resp: ` + responseType + `) => {
         if (err) {
           reject(err)
@@ -96,6 +97,7 @@ func (cfg GeneratorOptions) serviceToRPC(packageName string, s *descriptor.Servi
 	out := `export class ` + *s.Name + `Service extends EventEmitter {
   serviceFn: () => ServiceClient
   client?: ServiceClient
+  log: Logger = dummyLogger
   
   constructor(serviceFn: () => ServiceClient) {
     super()
@@ -111,17 +113,17 @@ func (cfg GeneratorOptions) serviceToRPC(packageName string, s *descriptor.Servi
 
   emitError(err: RPCError) {
     switch (err.code) {
-    case grpc.status.PERMISSION_DENIED:
-    case grpc.status.UNAUTHENTICATED:
-      this.emit('unauthenticated', err)
-      break
-    case grpc.status.UNAVAILABLE:
-      this.emit('unavailable', err)
-      break
-    default:
-      this.emit('error', err)
-      break
-    }
+      case grpc.status.PERMISSION_DENIED:
+      case grpc.status.UNAUTHENTICATED:
+        this.emit('unauthenticated', err)
+        break
+      case grpc.status.UNAVAILABLE:
+        this.emit('unavailable', err)
+        break
+      default:
+        this.emit('error', err)
+        break
+	}
   }
 
 ` + strings.Join(result, "\n") + `}`
@@ -182,6 +184,7 @@ import {ClientDuplexStream} from '@grpc/grpc-js/build/src/call'
 import * as grpc from '@grpc/grpc-js'
 import {EventEmitter} from 'events'
 import * as ` + base + ` from '{{.TypesImport}}'
+import {dummyLogger, Logger} from 'ts-log'
 
 export type RPCError = {
   name: string
