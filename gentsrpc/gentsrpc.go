@@ -35,7 +35,7 @@ func lowerPrefix(s string) (lower string) {
 func (cfg GeneratorOptions) methodToPromise(name string, m *descriptor.Method) (string, string, []string) {
 	// serviceName := m.Service.GetName()
 	methodName := *m.Name
-	rpcName := methodName // lowerPrefix(methodName)
+	rpcName := lowerPrefix(methodName)
 	requestType := (*m.InputType)[1:]
 	responseType := (*m.OutputType)[1:]
 	types := []string{requestType, responseType}
@@ -61,14 +61,32 @@ func (cfg GeneratorOptions) methodToPromise(name string, m *descriptor.Method) (
 func (cfg GeneratorOptions) streamMethod(name string, m *descriptor.Method) (string, string, []string) {
 	// serviceName := m.Service.GetName()
 	methodName := *m.Name
-	rpcName := methodName // lowerPrefix(methodName)
+	rpcName := lowerPrefix(methodName)
 	requestType := (*m.InputType)[1:]
 	responseType := (*m.OutputType)[1:]
 	types := []string{requestType, responseType}
 	// fullMethod := serviceName + "." + methodName
 
 	s := `  ` + rpcName + `(): ClientDuplexStream<` + requestType + `, ` + responseType + `> {
+    this.log.info('` + rpcName + `')
     return this.service().` + rpcName + `()
+  }
+`
+	return s, methodName, types
+}
+
+func (cfg GeneratorOptions) readStreamMethod(name string, m *descriptor.Method) (string, string, []string) {
+	// serviceName := m.Service.GetName()
+	methodName := *m.Name
+	rpcName := lowerPrefix(methodName)
+	requestType := (*m.InputType)[1:]
+	responseType := (*m.OutputType)[1:]
+	types := []string{requestType, responseType}
+	// fullMethod := serviceName + "." + methodName
+
+	s := `  ` + rpcName + `(req: ` + requestType + `): ClientReadableStream<` + responseType + `> {
+    this.log.info('` + rpcName + `')
+    return this.service().` + rpcName + `(req)
   }
 `
 	return s, methodName, types
@@ -84,6 +102,10 @@ func (cfg GeneratorOptions) serviceToRPC(packageName string, s *descriptor.Servi
 		var typs []string
 		if m.ClientStreaming != nil && *m.ClientStreaming && m.ServerStreaming != nil && *m.ServerStreaming {
 			ipc, method, typs = cfg.streamMethod(*s.Name, m)
+		} else if m.ServerStreaming != nil && *m.ServerStreaming {
+			ipc, method, typs = cfg.readStreamMethod(*s.Name, m)
+			// } else if m.ClientStreaming != nil && *m.ClientStreaming {
+			// 	return "", nil, errors.Errorf("server streaming unsupported: %s", *s.Name)
 		} else {
 			ipc, method, typs = cfg.methodToPromise(*s.Name, m)
 		}
@@ -180,7 +202,7 @@ func generate(file *descriptor.File, registry *descriptor.Registry, options Gene
 // InputID: {{.InputID}}
 
 import {ServiceClient} from '@grpc/grpc-js/build/src/make-client'
-import {ClientDuplexStream} from '@grpc/grpc-js/build/src/call'
+import {ClientDuplexStream, ClientReadableStream} from '@grpc/grpc-js/build/src/call'
 import * as grpc from '@grpc/grpc-js'
 import {EventEmitter} from 'events'
 import * as ` + base + ` from '{{.TypesImport}}'
