@@ -175,6 +175,7 @@ func generate(file *descriptor.File, registry *descriptor.Registry, options Gene
 
 	name := file.GetName()
 	ext := filepath.Ext(name)
+	pkg := file.GetPackage()
 	base := strings.TrimSuffix(name, ext)
 	typesImport := "./" + base
 
@@ -205,7 +206,7 @@ import {ServiceClient} from '@grpc/grpc-js/build/src/make-client'
 import {ClientDuplexStream, ClientReadableStream} from '@grpc/grpc-js/build/src/call'
 import * as grpc from '@grpc/grpc-js'
 import {EventEmitter} from 'events'
-import * as ` + base + ` from '{{.TypesImport}}'
+import * as ` + pkg + ` from '{{.TypesImport}}'
 import {dummyLogger, Logger} from 'ts-log'
 
 export type RPCError = {
